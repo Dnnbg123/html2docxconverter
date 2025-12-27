@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "html2docxconverter"
-version = "0.1.6"
+version = "0.1.7"
 description = "Конвертирует HTML в DOCX с сохранением стилей: списков, таблиц, шрифтов, цветов и т.д."
 readme = "README.md"
 license = {text = "MIT"}
