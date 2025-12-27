@@ -88,7 +88,7 @@ converted_doc.save("output.docx")
 
 ```python
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
-from schemas import ConfigSchema, DefaultTableStyleSchema, DefaultConfigSchema
+from htmltodocx.schemas import ConfigSchema, DefaultTableStyleSchema, DefaultConfigSchema
 from docx import Document
 from htmltodocx import HTMLtoDocx
 
