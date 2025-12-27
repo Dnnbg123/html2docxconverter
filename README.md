@@ -81,7 +81,7 @@ converter = HTMLtoDocx(doc)
 converted_doc = converter.parse_html(html_content)
 
 # Сохранение документа
-converted_doc.save("output.docx")
+doc.save("output.docx")
 ```
 
 ## Настройки форматирования
@@ -151,9 +151,10 @@ html_content = """
 doc = Document()
 converter = HTMLtoDocx(doc, config=base_config)
 converted_doc = converter.parse_html(html_content)
-
+par = doc.add_paragraph()
+par.add_run('Hello World!')
 # Сохранение документа
-converted_doc.save("output.docx")
+doc.save("output.docx")
 ```
 
 
