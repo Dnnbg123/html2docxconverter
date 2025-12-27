@@ -4,13 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "html2docxconverter"
-version = "0.1.5"
+version = "0.1.6"
 description = "Конвертирует HTML в DOCX с сохранением стилей: списков, таблиц, шрифтов, цветов и т.д."
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
   {name = "pew"}
 ]
+
 classifiers = [
   "Programming Language :: Python :: 3",
   "License :: OSI Approved :: MIT License",
@@ -23,3 +24,7 @@ dependencies = [
   "beautifulsoup4>=4.14.3",
   "soupsieve>=2.8.1"
 ]
+[project.urls]
+Homepage = "https://github.com/Dnnbg123/html2docxconverter"
+Repository = "https://github.com/Dnnbg123/html2docxconverter"
+Bug_Tracker = "https://github.com/Dnnbg123/html2docxconverter/issues"
