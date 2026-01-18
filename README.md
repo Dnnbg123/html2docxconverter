@@ -122,7 +122,7 @@ converted_doc = converter.parse_html(html_content)
 doc.save("output.docx")
 ```
 
-## Пример использования при парсинге при получении HTML страницы
+## Пример использования при получении HTML страницы по url
 
 ```python
 from docx import Document
