@@ -67,7 +67,7 @@ def parse_style_selector(tag: Tag, styles: Optional[StyleSchema] = None) -> Styl
         styles.subscript = True
 
     if tag_name and "style" in tag.attrs:
-        css_style = parse_style_css(tag["style"])
+        css_style = parse_style_css(tag["style"])  # ty:ignore[invalid-argument-type]
         if "font-size" in css_style:
             fs = str(css_style["font-size"])
             if fs.endswith("px"):
@@ -119,7 +119,7 @@ class ParserStyle:
     def css_table_style(self, width: str, style: str, color: str, style_dict: dict) -> tuple:
         default_style = self.default_settings.table_style.style
         if "border" in style_dict:
-            width, bs, color = self.parse_border(style_dict["border"])
+            width, bs, color = self.parse_border(style_dict["border"])  # ty:ignore[invalid-assignment]
             style = self.border_style.get(bs.strip(), default_style)
         if "border-width" in style_dict:
             width = style_dict["border-width"].strip()

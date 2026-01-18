@@ -6,10 +6,10 @@ wheels/
 *.egg-info
 *.lock
 *.html
+*.docx
 .gigaide
 .python-version
 .idea
-*.docx
 dist
 main.py
 .venv

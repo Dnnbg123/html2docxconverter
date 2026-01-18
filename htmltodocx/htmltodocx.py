@@ -18,22 +18,72 @@ from htmltodocx.parse_style import (
     ParserStyle,
 )
 from htmltodocx.schemas import ConfigSchema
+import requests
 
 if TYPE_CHECKING:
-    from docx.table import _Cell
     from bs4 import PageElement
+    from docx.table import _Cell
     from docx.text.paragraph import Paragraph
     from typing import Optional
     from docx.document import Document
 
 
 class HTMLtoDocx:
+    """
+    Конвертер HTML → DOCX, отвечающий за разбор HTML‑структуры,
+    применение стилей и построение итогового Word‑документа.
+
+    Класс инкапсулирует логику обработки HTML‑тегов, списков, таблиц,
+    изображений, встроенных стилей и текстовых элементов, постепенно
+    формируя объект `python-docx.Document`.
+
+    Параметры
+    ---------
+    document : Document
+        Экземпляр python-docx, в который будет записываться результат
+        конвертации.
+
+    config : ConfigSchema, optional
+        Конфигурация парсера (шрифты, отступы, правила обработки тегов).
+        По умолчанию используется `base_config`.
+
+    message_start : str | None, optional
+        Текст, который будет добавлен в начало документа перед основным
+        содержимым. Может использоваться для заголовков или служебных
+        сообщений.
+
+    layout_table_class : str | None, optional
+        Имя CSS‑класса таблиц, которые должны интерпретироваться как
+        элементы разметки (layout tables), а не как обычные таблицы данных. Т.е. таблица без границ
+
+    Атрибуты
+    --------
+    doc : Document
+        Текущий Word‑документ, в который записывается результат.
+
+    parser_style : ParserStyle
+        Обработчик CSS‑стилей, применяемых к HTML‑элементам.
+
+    first_paragraph : bool
+        Флаг, указывающий, что текущий обрабатываемый параграф — первый
+        в документе. Используется для корректного применения стилей.
+
+    list_helper : HTMLListHelper
+        Вспомогательный объект для обработки вложенных списков.
+
+    list_num_counter : int
+        Счётчик нумерации списков для уникальных абстрактных нумераторов.
+
+    abstract_num_counter : int
+        Счётчик абстрактных нумераторов для списков.
+    """
+
     def __init__(
             self,
             document: Document,
             config: ConfigSchema = base_config,
             message_start: str | None = None,
-            layout_table_class: str = None,
+            layout_table_class: Optional[str] = None,
     ):
         self.doc = document
         self.config = config
@@ -47,14 +97,41 @@ class HTMLtoDocx:
 
     def parse_html(self, html: str) -> Document:
         soup = BeautifulSoup(html, "html.parser")
-        for tag in soup.contents:
-            if tag:
-                self.handle_tag(tag)
+        if soup.body:
+            contents = soup.body.descendants
+        else:
+            contents = soup.contents
+
+        for element in contents:
+            if isinstance(element, Tag):
+                self.handle_tag(element)
         return self.doc
+
+    def parse_url(self, url: str, **kwargs) -> Document:
+        """
+        Загружает страницу по URL с поддержкой любых параметров requests.get.
+
+        Примеры параметров:
+        - params={"q": "python"}
+        - headers={"User-Agent": "..."}
+        - cookies={"session": "..."}
+        - timeout=5
+        """
+        try:
+            response = requests.get(url, **kwargs)
+            response.raise_for_status()
+            return self.parse_html(response.text)
+        except requests.exceptions.Timeout:
+            raise RuntimeError(f"Timeout при запросе: {url}")
+        except requests.exceptions.HTTPError as e:
+            raise RuntimeError(
+                f"HTTP ошибка {e.response.status_code} при запросе: {url}")
+        except requests.exceptions.RequestException as e:
+            raise RuntimeError(f"Ошибка сети: {e}")
 
     def handle_tag(
             self,
-            tag: NavigableString | Tag | PageElement,
+            tag: Tag,
             paragraph: Paragraph | None = None,
             with_indent: bool = False,
             table_cell: _Cell | None = None,
@@ -65,35 +142,39 @@ class HTMLtoDocx:
             self.handle_list_items(tag, paragraph, table_cell)
         elif tag.name == "table":
             self.handle_table(tag, table_cell)
-        elif tag.name in ['figure', 'img']:
+        elif tag.name in ['img', 'figure'] and tag.parent.name != "figure":
             self.handle_image(tag, paragraph)
         elif tag.text and paragraph:
             self.add_text_and_style(tag, paragraph)
 
-    def handle_image(self, tag: Tag, paragraph: Paragraph) -> None:
+    def handle_image(self, tag: Tag, paragraph: Optional[Paragraph] = None) -> None:
         if not paragraph:
             paragraph = self.doc.add_paragraph()
         self.parser_style.apply_position_image(tag, paragraph)
         add_image_to_docx(tag, paragraph)
 
     def handle_paragraph(
-            self, tag: list[Tag] | Tag, paragraph: Optional[Paragraph] = None, with_indent: bool = False
+            self, tag: Tag | Tag, paragraph: Optional[Paragraph] = None, with_indent: bool = False
     ) -> None:
         if not paragraph:
             paragraph = self.doc.add_paragraph()
 
         if with_indent:
+            """Для красной строки"""
             paragraph.paragraph_format.first_line_indent = Cm(1.25)
 
         self.parser_style.apply_position_paragraph(tag, paragraph)
+
         if self.first_paragraph and self.message_start:
-            first = paragraph.add_run(self.message_start)
-            first.underline = True
+            """Если нужно, чтобы было первые слова...
+                Из документа: <p> text </>
+            """
+            paragraph.add_run(self.message_start)
             self.first_paragraph = False
         self.add_text_and_style(tag, paragraph)
 
     def handle_list_items(
-            self, tag: Tag, paragraph: Paragraph, table_cell: _Cell | None = None
+            self, tag: Tag, paragraph: Optional[Paragraph] = None, table_cell: _Cell | None = None
     ) -> None:
         is_ordered = tag.name == "ol"
         num_id = self.list_helper.add_numbering_definition(is_ordered)
@@ -124,12 +205,14 @@ class HTMLtoDocx:
 
     def handle_table(self, tag: Tag, table_in_table: _Cell | None = None) -> None:
         tbody = tag.find("tbody", recursive=False)
+        if not tbody: return
         rows = tbody.find_all("tr", recursive=False)
         max_cols = 0
         for row_tag in rows:
             count = 0
             for col in row_tag.find_all(["td", "th"], recursive=False):
-                count += int(col.get("colspan", 1))
+                colspan = int(col.get("colspan") or 1)
+                count += colspan
             max_cols = max(max_cols, count)
 
         if table_in_table:
@@ -138,8 +221,9 @@ class HTMLtoDocx:
             table = self.doc.add_table(rows=len(rows), cols=max_cols)
 
         layout_table = False
-        if self.layout_table_class and tag and tag.get('class'):
-            layout_table = True if self.layout_table_class in tag.get("class") else False
+        if self.layout_table_class and tag:
+            classes = tag.get("class") or []
+            layout_table = True if self.layout_table_class in classes else False
 
         table_style = TableStyleApplier(tag, table).apply()
         cell_style = TableCellStyleApplier(
@@ -158,8 +242,8 @@ class HTMLtoDocx:
                 while col_ptr < max_cols and occupancy[row_idx][col_ptr]:
                     col_ptr += 1
 
-                rowspan = int(cell_tag.get("rowspan", 1))
-                colspan = int(cell_tag.get("colspan", 1))
+                rowspan = int(cell_tag.get("rowspan") or 1)
+                colspan = int(cell_tag.get("colspan") or 1)
 
                 start_cell = table.cell(row_idx, col_ptr)
                 for r in range(row_idx, row_idx + rowspan):
@@ -223,11 +307,11 @@ class HTMLtoDocx:
 
     def add_text_and_style(
             self,
-            tags: list[Tag | NavigableString] | NavigableString | Tag,
+            tags: Tag | NavigableString,
             paragraph: Paragraph,
     ) -> None:
         for tag in tags:
-            if tag.name in ["p", "ul", "ol", "table", "figure"]:
+            if isinstance(tag, Tag) and tag.name in ["p", "ul", "ol", "table", "figure"]:
                 self.handle_tag(tag, paragraph)
             else:
                 self._parse_styled_text(tag, paragraph)

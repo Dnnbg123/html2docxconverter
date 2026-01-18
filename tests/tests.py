@@ -1,10 +1,7 @@
 import unittest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import patch
 from bs4 import BeautifulSoup
 from docx import Document
-from docx.text.paragraph import Paragraph
-from docx.table import _Cell
-from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 
 from htmltodocx.config import base_config
 from htmltodocx.htmltodocx import HTMLtoDocx

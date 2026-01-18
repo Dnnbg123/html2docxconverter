@@ -15,7 +15,7 @@ class DefaultConfigSchema:
     align_paragraph: WD_PARAGRAPH_ALIGNMENT
     align_image: WD_PARAGRAPH_ALIGNMENT
     vertical_align: str
-    table_style: Optional[DefaultTableStyleSchema] = None
+    table_style: DefaultTableStyleSchema
 
 @dataclass
 class ConfigSchema:

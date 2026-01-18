@@ -1,12 +1,14 @@
 # Библиотека конвертации HTML в DOCX
 
-Python-библиотека для преобразования HTML-контента в документы Word (.docx) с поддержкой таблиц, списков, изображений и CSS-стилей.
+Python-библиотека для преобразования HTML-контента в документы Word (.docx) с поддержкой таблиц, списков, изображений и
+CSS-стилей.
 
 ## Установка
 
 ```bash
 pip install html2docxconverter
 ```
+
 ```bash
 uv add html2docxconverter
 ```
@@ -14,6 +16,7 @@ uv add html2docxconverter
 ## Поддерживаемые HTML-теги
 
 ### Основные теги
+
 - **`<p>`** - абзацы текста
 - **`<figure>`** - контейнеры для изображений
 - **`<ul>`** - неупорядоченные списки
@@ -26,8 +29,10 @@ uv add html2docxconverter
 - **`<colgroup>`** - группировка столбцов таблицы
 - **`<col>`** - определение столбца таблицы
 - **`<tbody>`** - тело таблицы
+- **`<img>`** - изображения (поддержка src, srcset, data URI, относительных путей)
 
 ### Теги форматирования текста
+
 - **`<strong>`**, **`<b>`** - жирный текст
 - **`<em>`**, **`<i>`** - курсив
 - **`<u>`** - подчеркнутый текст
@@ -39,6 +44,7 @@ uv add html2docxconverter
 ## Поддерживаемые CSS-стили
 
 ### Стили текста
+
 - **`color`** - цвет текста (имена цветов, hex, rgb)
 - **`background-color`** - выделение цветом (имена цветов, hex, rgb)
 - **`font-size`** - размер шрифта (px, pt, em, %)
@@ -46,6 +52,7 @@ uv add html2docxconverter
 - **`vertical-align`** - вертикальное выравнивание (top, middle, bottom)
 
 ### Стили таблиц и ячеек
+
 - **`width`** - ширина таблицы/ячейки (px, %)
 - **`height`** - высота строки/ячейки (px)
 - **`background-color`** - цвет фона таблицы/ячейки
@@ -55,10 +62,41 @@ uv add html2docxconverter
 - **`border-color`** - цвет границы
 - **`float`** - позиционирование таблицы (left, right)
 
+### Стили изображений
+
+- **`width`** — ширина изображения (px, %, em)
+- **`height`** — высота изображения (px, em)
+- **`aspect-ratio`** — сохранение пропорций
+- **`object-fit`** — `contain`, `cover`
+- **`display`** — `block`, `inline-block`
+- **`float`** — `left`, `right` (обтекание текста)
+- **`margin`** — внешние отступы
+- **`border-radius`** — скругление углов (реализовано через маску PNG)
+- **`box-shadow`** — тень (реализована через Pillow)
+
+Дополнительно:
+
+- поддержка **WebP → PNG**
+- поддержка **srcset** (выбор лучшего изображения)
+- поддержка **относительных путей** через `<base href="...">`
+- автоматическое **ограничение ширины и высоты страницы**
+
+---
+
+## Дополнительные возможности
+
+- Автоматическая обработка `<base href="...">` для относительных путей
+- Корректная работа с вложенными списками
+- Поддержка layout‑таблиц (если указан CSS‑класс)
+- Поддержка многоуровневых списков
+- Поддержка inline‑стилей в `<span>`
+- Корректная обработка HTML‑структуры через BeautifulSoup
+
 ### За основу при создании HTML контента использовался
+
 [CKEditor](https://ckeditor.com/)
 
-## Пример использования
+## Пример использования при парсинге HTML
 
 ```python
 from docx import Document
@@ -79,6 +117,22 @@ html_content = """
 # Конвертация HTML в DOCX
 converter = HTMLtoDocx(doc)
 converted_doc = converter.parse_html(html_content)
+
+# Сохранение документа
+doc.save("output.docx")
+```
+
+## Пример использования при парсинге при получении HTML страницы
+
+```python
+from docx import Document
+from htmltodocx import HTMLtoDocx
+
+# Создание нового документа
+doc = Document()
+# Получение HTML и конвертация в DOCX
+converter = HTMLtoDocx(doc)
+converted_doc = converter.parse_url('https://habr.com/en/news/930292/')
 
 # Сохранение документа
 doc.save("output.docx")
@@ -149,14 +203,13 @@ html_content = """
 
 # Конвертация HTML в DOCX
 doc = Document()
-converter = HTMLtoDocx(doc, config=base_config)
+converter = HTMLtoDocx(doc, config=base_config, layout_table_class='layout-table', message_start='HTML контент: ')
 converted_doc = converter.parse_html(html_content)
 par = doc.add_paragraph()
 par.add_run('Hello World!')
 # Сохранение документа
 doc.save("output.docx")
 ```
-
 
 ## Лицензия
 
